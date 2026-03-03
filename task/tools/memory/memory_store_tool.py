@@ -23,32 +23,79 @@ class StoreMemoryTool(BaseTool):
 
     @property
     def name(self) -> str:
-        # TODO: provide self-descriptive name
-        raise NotImplementedError()
+        # provide self-descriptive name
+        return "long_term_memory_store_tool"
 
     @property
     def description(self) -> str:
-        # TODO: provide tool description that will help LLM to understand when to use this tools and cover 'tricky'
+        # provide tool description that will help LLM to understand when to use this tools and cover 'tricky'
         #  moments (not more 1024 chars)
-        raise NotImplementedError()
+        return ("Tool for storing long-term memories about the user. "
+                "Extract important, novel facts about the user and store them using this tool. "
+                "Should be used for future conversations to make the assistant more personalized and context-aware. ")
 
     @property
     def parameters(self) -> dict[str, Any]:
-        # TODO: provide tool parameters JSON Schema:
+        # provide tool parameters JSON Schema:
         #  - content is string, description: "The memory content to store. Should be a clear, concise fact about the user.", required
         #  - category is string, description: "Category of the info (e.g., 'preferences', 'personal_info', 'goals', 'plans', 'context')", default is 'general' required
         #  - importance is number, description: "Importance score between 0 and 1. Higher means more important to remember.", minimum is 0, maximum is 1, default is 0.5
         #  - topics is array of strings, description: "Related topics or tags for the memory", default is empty array
-        raise NotImplementedError()
+        return {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "description": "The memory content to store. Should be a clear, concise fact about the user.",
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Category of the info (e.g., 'preferences', 'personal_info', 'goals', 'plans', 'context')",
+                    "default": "general",
+                },
+                "importance": {
+                    "type": "number",
+                    "description": "Importance score between 0 and 1. Higher means more important to remember.",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0.5,
+                },
+                "topics": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Related topics or tags for the memory",
+                    "default": [],
+                }
+            },
+            "required": ["content", "category"]
+        }
 
     async def _execute(self, tool_call_params: ToolCallParams) -> str:
-        #TODO:
+
         # 1. Load arguments with `json`
+        args = json.load(tool_call_params.tool_call.function.arguments)
+
         # 2. Get `content` from arguments
+        content = args.get("content")
+
         # 3. Get `category` from arguments
+        category = args.get("category")
+
         # 4. Get `importance` from arguments, default is 0.5
+        importance = args.get("importance", 0.5)
+
         # 5. Get `topics` from arguments, default is empty array
+        topics = args.get("topics", [])
+
         # 6. Call `memory_store` `add_memory` (we will implement logic in `memory_store` later)
+        result = await self.memory_store.add_memory(api_key=tool_call_params.api_key,
+                                                    content=content, 
+                                                    category=category, 
+                                                    importance=importance, 
+                                                    topics=topics)
+
         # 7. Add result to stage
+        tool_call_params.stage.append_content(result)
+        
         # 8. Return result
-        raise NotImplementedError()
+        return result
